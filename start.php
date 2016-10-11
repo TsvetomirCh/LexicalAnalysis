@@ -17,13 +17,13 @@ _        _______          _________ _______  _______
 | (____/\| (____/\( /   \ )___) (___| (____/\| )   ( |
 (_______/(_______/|/     \|\_______/(_______/|/     \|
 
-by Tsvetomir Chervenkovs
+by Tsvetomir Chervenkov
 
 \033[34m
-Grammar: 
+Grammar:
     Opening tag: [
     Closing tag: ]
-    Math: + - * / 
+    Math: + - * /
     Logical < > != ==
     Loop ??
     Exit ^
@@ -31,7 +31,7 @@ EOT;
 
 echo <<<EOT
 \033[32m
-Enter the expression: 
+Enter the expression:
 EOT;
 
 $string = fopen('php://stdin', 'r');
