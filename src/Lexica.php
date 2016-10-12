@@ -4,131 +4,187 @@ namespace App;
 
 class Lexica
 {
+    /**
+     * @var string
+     */
     protected $expression;
+
+    /**
+     * @var array
+     */
     protected $logicalOperators;
+
+    /**
+     * @var array
+     */
     protected $mathOperator;
+
+    /**
+     * @var array
+     */
     protected $loopOperator;
 
-    protected $number = '';
-    protected $indent = '';
+    /**
+     * @var string
+     */
+    protected $numberBuffer = '';
 
+    /**
+     * @var string
+     */
+    protected $indentBuffer = '';
+
+    protected $step;
+
+    /**
+     * Lexica constructor.
+     *
+     * @param $expression
+     */
     public function __construct($expression)
     {
         $this->expression = $expression;
         $this->logicalOperators = Grammar::logicalOperators();
         $this->mathOperator = Grammar::mathOperators();
         $this->loopOperator = Grammar::loopOperator();
+        $this->step = 1;
     }
 
+    /**
+     * Do the analyze.
+     */
     public function analyze()
     {
         $this->expression = str_split($this->expression);
-        $step = 1;
 
         for ($i = 0; $i < count($this->expression); $i++) {
             $value = $this->expression[$i];
 
+            // Check if starts with opening tag.
             if ($i == 0) {
                 if ($value == Grammar::begin) {
-                    Printer::success("Opening tag [ ", $step);
-                    $step++; continue;
+                    Printer::success("Opening tag [ ", $this->step);
+                    $this->step++; continue;
                 } else {
-                    Printer::kill("Syntax Error expected [ for start.", $step);
+                    Printer::kill("Syntax Error expected [ for start.", $this->step);
                 }
             }
 
+            /*
+             *  If last char dump the buffers and check for closing tag.
+             */
             if ($i == count($this->expression) - 1 ) {
-                if (!empty($this->indent)) {
-                    Printer::success($this->indent, $step); $step++;
+                if (!empty($this->indentBuffer)) {
+                    Printer::success($this->indentBuffer, $this->step); $this->step++;
                 }
 
-                if (!empty($this->number)) {
-                    Printer::success($this->number, $step); $step++;
+                if (!empty($this->numberBuffer)) {
+                    Printer::success($this->numberBuffer, $this->step); $this->step++;
                 }
 
                 if ($value == Grammar::end) {
-                    Printer::success("Closing tag ] ", $step);
+                    Printer::success("Closing tag ] ", $this->step);
                     continue;
                 } else {
-                    Printer::kill("Syntax Error expected ] for end got {$value}", $step);
+                    Printer::kill("Syntax Error expected ] for end got {$value}", $this->step);
                 }
             }
 
+            /*
+             *  Empty space is ignored.
+             */
             if ($value == ' ') {
                 continue;
             }
 
+            /*
+             * Check the current combined with the next char for valid operator.
+             * If fails check the current char alone.
+             */
             $operator = $this->isOperator($value . $this->expression[$i + 1]);
             if (!$operator) {
                 $operator = $this->isOperator($value);
                 if ($operator) {
-                    if (!empty($this->indent)) {
-                        Printer::success($this->indent, $step);
-                        $this->indent = '';
-                        $step++;
+                    if (!empty($this->indentBuffer)) {
+                        Printer::success($this->indentBuffer, $this->step);
+                        $this->indentBuffer = '';
+                        $this->step++;
                     }
 
-                    if (!empty($this->number)) {
-                        Printer::success($this->number, $step);
-                        $this->number = '';
-                        $step++;
+                    if (!empty($this->numberBuffer)) {
+                        Printer::success($this->numberBuffer, $this->step);
+                        $this->numberBuffer = '';
+                        $this->step++;
                     }
                     if ($value == '^') {
-                        Printer::exit($step);
+                        Printer::exit($this->step);
                     }
-                    Printer::success("{$operator} : {$value}", $step);
-                    $step++; continue;
+                    Printer::success("{$operator} : {$value}", $this->step);
+                    $this->step++; continue;
                 }
             } else {
-                if (!empty($this->indent)) {
-                    Printer::success($this->indent, $step);
-                    $this->indent = '';
-                    $step++;
+                if (!empty($this->indentBuffer)) {
+                    Printer::success($this->indentBuffer, $this->step);
+                    $this->indentBuffer = '';
+                    $this->step++;
                 }
 
-                if (!empty($this->number)) {
-                    Printer::success($this->number, $step);
-                    $this->number = '';
-                    $step++;
+                if (!empty($this->numberBuffer)) {
+                    Printer::success($this->numberBuffer, $this->step);
+                    $this->numberBuffer = '';
+                    $this->step++;
                 }
-                Printer::success("{$operator} : {$value}{$this->expression[$i + 1]}", $step);
-                $i++; $step++; continue;
+                Printer::success("{$operator} : {$value}{$this->expression[$i + 1]}", $this->step);
+                $i++; $this->step++; continue;
             }
 
+            /*
+             * Check for alphabetic character and put it in buffer
+             */
             if (ctype_alpha($value)) {
-                if (!empty($this->number)) {
-                    Printer::success($this->number, $step);
-                    $this->number = '';
-                    $this->indent .= $value;
-                    $step++; continue;
+                if (!empty($this->numberBuffer)) {
+                    Printer::success($this->numberBuffer, $this->step);
+                    $this->numberBuffer = '';
+                    $this->indentBuffer .= $value;
+                    $this->step++; continue;
                 } else {
-                    $this->indent .= $value;
+                    $this->indentBuffer .= $value;
                 }
             }
 
+            /*
+             * Check for numeric character and put it in buffer
+             */
             if (is_numeric($value)) {
-                if (empty($this->indent)) {
-                    $this->number .= $value;
+                if (empty($this->indentBuffer)) {
+                    $this->numberBuffer .= $value;
                 } else {
-                    $this->indent .= $value;
+                    $this->indentBuffer .= $value;
                 }
             }
-            if ( !ctype_alpha($value) &&
+            /*
+             * If its not number or letter or valid operator its lexical error.
+             */
+            if (!ctype_alpha($value) &&
                 !is_numeric($value) &&
                 !$operator
             ) {
-                if (!empty($this->number)) {
-                    Printer::success($this->number,  $step);
+                if (!empty($this->numberBuffer)) {
+                    Printer::success($this->numberBuffer,  $this->step);
                 }
 
-                if (!empty($this->indent)) {
-                    Printer::success($this->indent,  $step);
+                if (!empty($this->indentBuffer)) {
+                    Printer::success($this->indentBuffer,  $this->step);
                 }
-                Printer::kill("Lexical Error: {$value}", $step);
+                Printer::kill("Lexical Error: {$value}", $this->step);
             }
         }
     }
 
+    /**
+     * @param $value
+     * @return bool|mixed
+     */
     private function isOperator($value)
     {
         if (array_key_exists($value, $this->logicalOperators)) {

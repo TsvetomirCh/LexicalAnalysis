@@ -4,9 +4,19 @@ namespace App;
 
 class Grammar
 {
+    /**
+     * Opening tag
+     */
     const begin = '[';
+
+    /**
+     * Closing tag
+     */
     const end = ']';
 
+    /**
+     * @return array
+     */
     public static function mathOperators()
     {
         return [
@@ -18,6 +28,9 @@ class Grammar
         ];
     }
 
+    /**
+     * @return array
+     */
     public static function logicalOperators()
     {
         return [
@@ -29,6 +42,9 @@ class Grammar
         ];
     }
 
+    /**
+     * @return array
+     */
     public static function loopOperator()
     {
         return [
