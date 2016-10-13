@@ -15,6 +15,16 @@ class Grammar
     const end = ']';
 
     /**
+     * Opening bracket after operator
+     */
+    const openingBracket = '(';
+
+    /**
+     * Closing bracket after operator
+     */
+    const closingBracket = ')';
+
+    /**
      * @return array
      */
     public static function mathOperators()

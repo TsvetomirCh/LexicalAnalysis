@@ -34,7 +34,25 @@ class Lexica
      */
     protected $indentBuffer = '';
 
+    /**
+     * @var int
+     */
     protected $step;
+
+    /**
+     * @var bool
+     */
+    protected $shouldFollowIndent = false;
+
+    /**
+     * @var bool
+     */
+    protected $shouldFollowOpeningBracket = false;
+
+    /**
+     * @var bool
+     */
+    protected $shouldFollowClosingBracket = false;
 
     /**
      * Lexica constructor.
@@ -70,12 +88,46 @@ class Lexica
                 }
             }
 
+            if ($this->shouldFollowOpeningBracket == true) {
+                if ($value != Grammar::openingBracket) {
+                    Printer::kill("Syntax Error expected ( ", $this->step);
+                } else {
+                    $this->shouldFollowOpeningBracket = false;
+                    Printer::success(Grammar::openingBracket, $this->step); $this->step++;
+                    $this->shouldFollowIndent = true;
+                    continue;
+                }
+            } else if ($this->shouldFollowClosingBracket == true) {
+                if ($value != Grammar::closingBracket) {
+                    Printer::kill("Syntax Error expected ) ", $this->step);
+                }
+                else {
+                    $this->shouldFollowClosingBracket = false;
+                    Printer::success(Grammar::closingBracket, $this->step); $this->step++;
+                    continue;
+                }
+            }
+
             /*
              *  If last char dump the buffers and check for closing tag.
              */
             if ($i == count($this->expression) - 1 ) {
+
+                if ($this->shouldFollowOpeningBracket) {
+                    Printer::kill("Expected ( got end of expression.",$this->step);
+                }
+
                 if (!empty($this->indentBuffer)) {
+                    if ($this->shouldFollowIndent) {
+                        $this->shouldFollowClosingBracket = true;
+                    }
                     Printer::success($this->indentBuffer, $this->step); $this->step++;
+                } else if($this->shouldFollowIndent) {
+                    Printer::kill("Expected identifier got end of expression.",$this->step);
+                }
+
+                if ($this->shouldFollowClosingBracket) {
+                    Printer::kill("Expected ) got end of expression.",$this->step);
                 }
 
                 if (!empty($this->numberBuffer)) {
@@ -87,6 +139,11 @@ class Lexica
                     continue;
                 } else {
                     Printer::kill("Syntax Error expected ] for end got {$value}", $this->step);
+                }
+            } else {
+                // last char
+                if ($value == Grammar::end) {
+                    Printer::kill("Got ] not in the end of the expression. ", $this->step);
                 }
             }
 
@@ -105,10 +162,21 @@ class Lexica
             if (!$operator) {
                 $operator = $this->isOperator($value);
                 if ($operator) {
+                    if ($this->shouldFollowIndent == true) {
+                        Printer::kill("Got {$operator} should have identifier. ", $this->step);
+                    }
                     if (!empty($this->indentBuffer)) {
+                        if ($this->shouldFollowIndent) {
+                            $this->shouldFollowClosingBracket = true;
+                        }
                         Printer::success($this->indentBuffer, $this->step);
                         $this->indentBuffer = '';
                         $this->step++;
+                        $this->shouldFollowIndent = false;
+                    } else {
+                        if ($this->shouldFollowIndent) {
+                            Printer::kill("Expected identifier got {$value} ", $this->step);
+                        }
                     }
 
                     if (!empty($this->numberBuffer)) {
@@ -116,17 +184,30 @@ class Lexica
                         $this->numberBuffer = '';
                         $this->step++;
                     }
+
                     if ($value == '^') {
                         Printer::exit($this->step);
                     }
+
                     Printer::success("{$operator} : {$value}", $this->step);
                     $this->step++; continue;
                 }
             } else {
+                if ($this->shouldFollowIndent == true) {
+                    Printer::kill("Got {$operator} should have identifier. ", $this->step);
+                }
                 if (!empty($this->indentBuffer)) {
+                    if ($this->shouldFollowIndent) {
+                        $this->shouldFollowClosingBracket = true;
+                    }
                     Printer::success($this->indentBuffer, $this->step);
                     $this->indentBuffer = '';
                     $this->step++;
+                    $this->shouldFollowIndent = false;
+                } else {
+                    if ($this->shouldFollowIndent) {
+                        Printer::kill("Expected identifier got {$value} ", $this->step);
+                    }
                 }
 
                 if (!empty($this->numberBuffer)) {
@@ -134,6 +215,15 @@ class Lexica
                     $this->numberBuffer = '';
                     $this->step++;
                 }
+
+                if ($value . $this->expression[$i + 1] == key($this->loopOperator)) {
+                    $this->shouldFollowOpeningBracket = true;
+                }
+
+                if ($this->shouldFollowIndent == true) {
+                    Printer::kill("Got {$operator} should have identifier. ", $this->step);
+                }
+
                 Printer::success("{$operator} : {$value}{$this->expression[$i + 1]}", $this->step);
                 $i++; $this->step++; continue;
             }
@@ -174,8 +264,24 @@ class Lexica
                 }
 
                 if (!empty($this->indentBuffer)) {
-                    Printer::success($this->indentBuffer,  $this->step);
+                    Printer::success($this->indentBuffer,  $this->step); $this->step++;
+                    $this->indentBuffer = '';
+                    if ($this->shouldFollowIndent) {
+                        $this->shouldFollowIndent = false;
+                        $this->shouldFollowClosingBracket = true;
+                    }
+
+                    if ($this->shouldFollowClosingBracket) {
+                        if ($value == Grammar::closingBracket) {
+                            $this->shouldFollowClosingBracket = false;
+                            Printer::success(Grammar::closingBracket, $this->step); $this->step++;
+                            continue;
+                        } else {
+                            Printer::kill("Syntax Error expected ) ", $this->step);
+                        }
+                    }
                 }
+
                 Printer::kill("Lexical Error: {$value}", $this->step);
             }
         }
