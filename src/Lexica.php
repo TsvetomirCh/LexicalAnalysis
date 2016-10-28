@@ -32,7 +32,7 @@ class Lexica
     /**
      * @var string
      */
-    protected $indentBuffer = '';
+    protected $identifierBuffer = '';
 
     /**
      * @var int
@@ -117,11 +117,11 @@ class Lexica
                     Printer::kill("Expected ( got end of expression.",$this->step);
                 }
 
-                if (!empty($this->indentBuffer)) {
+                if (!empty($this->identifierBuffer)) {
                     if ($this->shouldFollowIndent) {
                         $this->shouldFollowClosingBracket = true;
                     }
-                    Printer::success($this->indentBuffer, $this->step); $this->step++;
+                    Printer::success($this->identifierBuffer, $this->step); $this->step++;
                 } else if($this->shouldFollowIndent) {
                     Printer::kill("Expected identifier got end of expression.",$this->step);
                 }
@@ -162,15 +162,15 @@ class Lexica
             if (!$operator) {
                 $operator = $this->isOperator($value);
                 if ($operator) {
-                    if ($this->shouldFollowIndent == true) {
+                    if ($this->shouldFollowIndent == true && empty($this->identifierBuffer)) {
                         Printer::kill("Got {$operator} should have identifier. ", $this->step);
                     }
-                    if (!empty($this->indentBuffer)) {
+                    if (!empty($this->identifierBuffer)) {
                         if ($this->shouldFollowIndent) {
                             $this->shouldFollowClosingBracket = true;
                         }
-                        Printer::success($this->indentBuffer, $this->step);
-                        $this->indentBuffer = '';
+                        Printer::success($this->identifierBuffer, $this->step);
+                        $this->identifierBuffer = '';
                         $this->step++;
                         $this->shouldFollowIndent = false;
                     } else {
@@ -193,15 +193,15 @@ class Lexica
                     $this->step++; continue;
                 }
             } else {
-                if ($this->shouldFollowIndent == true) {
+                if ($this->shouldFollowIndent == true && empty($this->identifierBuffer)) {
                     Printer::kill("Got {$operator} should have identifier. ", $this->step);
                 }
-                if (!empty($this->indentBuffer)) {
+                if (!empty($this->identifierBuffer)) {
                     if ($this->shouldFollowIndent) {
                         $this->shouldFollowClosingBracket = true;
                     }
-                    Printer::success($this->indentBuffer, $this->step);
-                    $this->indentBuffer = '';
+                    Printer::success($this->identifierBuffer, $this->step);
+                    $this->identifierBuffer = '';
                     $this->step++;
                     $this->shouldFollowIndent = false;
                 } else {
@@ -235,10 +235,10 @@ class Lexica
                 if (!empty($this->numberBuffer)) {
                     Printer::success($this->numberBuffer, $this->step);
                     $this->numberBuffer = '';
-                    $this->indentBuffer .= $value;
+                    $this->identifierBuffer .= $value;
                     $this->step++; continue;
                 } else {
-                    $this->indentBuffer .= $value;
+                    $this->identifierBuffer .= $value;
                 }
             }
 
@@ -246,10 +246,10 @@ class Lexica
              * Check for numeric character and put it in buffer
              */
             if (is_numeric($value)) {
-                if (empty($this->indentBuffer)) {
+                if (empty($this->identifierBuffer)) {
                     $this->numberBuffer .= $value;
                 } else {
-                    $this->indentBuffer .= $value;
+                    $this->identifierBuffer .= $value;
                 }
             }
             /*
@@ -263,9 +263,9 @@ class Lexica
                     Printer::success($this->numberBuffer,  $this->step);
                 }
 
-                if (!empty($this->indentBuffer)) {
-                    Printer::success($this->indentBuffer,  $this->step); $this->step++;
-                    $this->indentBuffer = '';
+                if (!empty($this->identifierBuffer)) {
+                    Printer::success($this->identifierBuffer,  $this->step); $this->step++;
+                    $this->identifierBuffer = '';
                     if ($this->shouldFollowIndent) {
                         $this->shouldFollowIndent = false;
                         $this->shouldFollowClosingBracket = true;
